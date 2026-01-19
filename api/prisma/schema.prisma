@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  jobs         JobUrl[]
+  opens        Open[]
+}
+
+model JobUrl {
+  id        String   @id @default(cuid())
+  url       String   @unique
+  createdAt DateTime @default(now())
+
+  createdByUserId String?
+  createdByUser   User?    @relation(fields: [createdByUserId], references: [id])
+
+  tags   JobUrlTag[]
+  opens  Open[]
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  jobs JobUrlTag[]
+}
+
+model JobUrlTag {
+  jobUrlId String
+  tagId    String
+
+  jobUrl JobUrl @relation(fields: [jobUrlId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([jobUrlId, tagId])
+  @@index([tagId])
+}
+
+model Open {
+  id        String   @id @default(cuid())
+  openedAt  DateTime @default(now())
+
+  userId   String
+  jobUrlId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobUrl JobUrl @relation(fields: [jobUrlId], references: [id], onDelete: Cascade)
+
+  @@index([userId, jobUrlId, openedAt])
+}
