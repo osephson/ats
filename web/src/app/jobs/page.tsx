@@ -1,27 +1,57 @@
 "use client";
 
 import { apiFetch, getToken } from "@/lib/api";
-import type { Job, LastOpened, Tag } from "@/lib/types";
-import { useRequireAuth } from "@/lib/useRequireAuth";
+import type { Job, JobsListResponse, LastOpened, Tag } from "@/lib/types";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 
 const MAX_OPEN_TABS_SAFELY = 15;
+const DEFAULT_PAGE_SIZE = 25;
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
 
 export default function JobsPage() {
+  const { ready } = useRequireAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [meta, setMeta] = useState<JobsListResponse["meta"] | null>(null);
   const [allTags, setAllTags] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const queryString = useMemo(() => {
-    const qs: string[] = [];
-    for (const t of selectedTags) qs.push(`tag=${encodeURIComponent(t)}`);
-    return qs.length ? `?${qs.join("&")}` : "";
-  }, [selectedTags]);
+  // Read state from URL
+  const selectedTags = useMemo(() => searchParams.getAll("tag"), [searchParams]);
+  const page = useMemo(() => {
+    const p = parseInt(searchParams.get("page") || "1", 10);
+    return Number.isFinite(p) ? Math.max(1, p) : 1;
+  }, [searchParams]);
+  const pageSize = useMemo(() => {
+    const ps = parseInt(searchParams.get("pageSize") || String(DEFAULT_PAGE_SIZE), 10);
+    return Number.isFinite(ps) ? clamp(ps, 1, 100) : DEFAULT_PAGE_SIZE;
+  }, [searchParams]);
 
+  function setQuery(next: Record<string, string | string[] | null>) {
+    const sp = new URLSearchParams(searchParams.toString());
+
+    for (const [k, v] of Object.entries(next)) {
+      sp.delete(k);
+      if (v === null) continue;
+      if (Array.isArray(v)) v.forEach((x) => sp.append(k, x));
+      else sp.set(k, v);
+    }
+
+    router.push(`${pathname}?${sp.toString()}`);
+  }
+
+  // client-side search only (doesn’t change server results)
   const filteredJobs = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return jobs;
@@ -39,26 +69,33 @@ export default function JobsPage() {
   }, [filteredJobs, selectedIds]);
 
   async function load() {
+    if (!ready) return;
     setErr(null);
     setLoading(true);
 
     try {
+      const qs = new URLSearchParams();
+      selectedTags.forEach((t) => qs.append("tag", t));
+      qs.set("page", String(page));
+      qs.set("pageSize", String(pageSize));
+
       const [jobsRes, tagsRes] = await Promise.all([
-        apiFetch<Job[]>(`/jobs${queryString}`),
+        apiFetch<JobsListResponse>(`/jobs?${qs.toString()}`),
         apiFetch<Tag[]>(`/tags`).catch(() => [] as Tag[]),
       ]);
 
-      setJobs(jobsRes);
+      setJobs(jobsRes.items);
+      setMeta(jobsRes.meta);
       setAllTags(tagsRes.map((t) => t.name));
 
-      // reset selection on data refresh
+      // reset selection when page/filter changes
       setSelectedIds(new Set());
 
-      // fetch last opened for visible jobs if signed in
-      if (getToken() && jobsRes.length > 0) {
+      // fetch last opened for page items if signed in
+      if (getToken() && jobsRes.items.length > 0) {
         const opened = await apiFetch<LastOpened[]>("/opens/last", {
           method: "POST",
-          body: JSON.stringify({ jobUrlIds: jobsRes.map((j) => j.id) }),
+          body: JSON.stringify({ jobUrlIds: jobsRes.items.map((j) => j.id) }),
         });
 
         const map = new Map(opened.map((o) => [o.jobUrlId, o.lastOpenedAt]));
@@ -79,13 +116,18 @@ export default function JobsPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryString]);
+  }, [ready, page, pageSize, selectedTags.join("|")]);
 
   function toggleTag(t: string) {
-    setSelectedTags((prev) => {
-      if (prev.includes(t)) return prev.filter((x) => x !== t);
-      return [...prev, t];
-    });
+    const has = selectedTags.includes(t);
+    const nextTags = has ? selectedTags.filter((x) => x !== t) : [...selectedTags, t];
+
+    // When filter changes, reset to page 1
+    setQuery({ tag: nextTags, page: "1", pageSize: String(pageSize) });
+  }
+
+  function goToPage(nextPage: number) {
+    setQuery({ page: String(nextPage) });
   }
 
   function toggleOne(id: string) {
@@ -97,29 +139,24 @@ export default function JobsPage() {
     });
   }
 
-  function selectAllVisible() {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      for (const j of filteredJobs) next.add(j.id);
-      return next;
-    });
-  }
-
-  function clearSelection() {
-    setSelectedIds(new Set());
-  }
-
   function toggleSelectAllVisible() {
     if (allVisibleSelected) {
-      // unselect visible
       setSelectedIds((prev) => {
         const next = new Set(prev);
         for (const j of filteredJobs) next.delete(j.id);
         return next;
       });
     } else {
-      selectAllVisible();
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const j of filteredJobs) next.add(j.id);
+        return next;
+      });
     }
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
   }
 
   async function copySelectedUrls() {
@@ -144,12 +181,10 @@ export default function JobsPage() {
     const openCount = Math.min(selectedJobs.length, MAX_OPEN_TABS_SAFELY);
     const tooMany = selectedJobs.length > MAX_OPEN_TABS_SAFELY;
 
-    // Open tabs (likely blocked if too many)
     for (let i = 0; i < openCount; i++) {
       window.open(selectedJobs[i].url, "_blank", "noopener,noreferrer");
     }
 
-    // Record opens if logged in
     if (getToken()) {
       try {
         await apiFetch<{ inserted: number }>("/opens", {
@@ -171,19 +206,11 @@ export default function JobsPage() {
         );
 
         if (tooMany) {
-          setErr(
-            `Opened first ${MAX_OPEN_TABS_SAFELY}. To avoid popup blockers, copy URLs for the rest.`
-          );
+          setErr(`Opened first ${MAX_OPEN_TABS_SAFELY}. Copy URLs for the rest.`);
         }
       } catch (ex: any) {
         setErr(`Opened tabs, but failed to record opens: ${ex?.message || "error"}`);
       }
-    } else {
-      setErr(
-        tooMany
-          ? `Opened first ${MAX_OPEN_TABS_SAFELY}. Sign in to track opens and copy URLs for the rest.`
-          : "Opened tabs. (Sign in if you want to track opened timestamps.)"
-      );
     }
   }
 
@@ -197,8 +224,11 @@ export default function JobsPage() {
     }
   }
 
-  const { ready } = useRequireAuth();
   if (!ready) return null;
+
+  const totalPages = meta?.totalPages ?? 1;
+  const canPrev = page > 1;
+  const canNext = page < totalPages;
 
   return (
     <div style={{ display: "grid", gap: 14, paddingBottom: 84 }}>
@@ -206,22 +236,13 @@ export default function JobsPage() {
         <div style={{ display: "grid", gap: 6 }}>
           <h1 style={{ margin: 0 }}>Browse jobs</h1>
           <div style={{ fontSize: 13, color: "#666" }}>
-            {loading ? "Loading..." : `Showing ${filteredJobs.length} jobs`}
-            {selectedTags.length ? ` (filtered by tags)` : ""}
+            {loading
+              ? "Loading..."
+              : `Page ${page} / ${totalPages} · Showing ${jobs.length} of ${meta?.totalCount ?? 0}`}
           </div>
         </div>
 
-        <button
-          onClick={load}
-          style={{
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: "1px solid #ddd",
-            background: "white",
-            cursor: "pointer",
-            height: "fit-content",
-          }}
-        >
+        <button onClick={load} style={btnStyle}>
           Refresh
         </button>
       </div>
@@ -229,77 +250,96 @@ export default function JobsPage() {
       {err && <div style={{ color: "crimson", whiteSpace: "pre-wrap" }}>{err}</div>}
 
       {/* Controls */}
-      <div style={{ display: "grid", gap: 10 }}>
-        <div
-          style={{
-            border: "1px solid #eee",
-            borderRadius: 12,
-            padding: 12,
-            display: "grid",
-            gap: 10,
-          }}
-        >
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search URL contains…"
-              style={{
-                flex: 1,
-                minWidth: 220,
-                padding: 10,
-                border: "1px solid #ddd",
-                borderRadius: 10,
-              }}
-            />
-            <button
-              onClick={toggleSelectAllVisible}
-              disabled={filteredJobs.length === 0}
-              style={btnStyle}
-            >
-              {allVisibleSelected ? "Unselect page" : "Select page"}
-            </button>
-            <button onClick={clearSelection} disabled={selectedIds.size === 0} style={btnStyle}>
-              Clear
-            </button>
-          </div>
+      <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12, display: "grid", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search URL contains… (current page only)"
+            style={{
+              flex: 1,
+              minWidth: 220,
+              padding: 10,
+              border: "1px solid #ddd",
+              borderRadius: 10,
+            }}
+          />
+          <button onClick={toggleSelectAllVisible} disabled={filteredJobs.length === 0} style={btnStyle}>
+            {allVisibleSelected ? "Unselect page" : "Select page"}
+          </button>
+          <button onClick={clearSelection} disabled={selectedIds.size === 0} style={btnStyle}>
+            Clear
+          </button>
+        </div>
 
-          <div>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>Filter by tags (AND)</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {(allTags.length ? allTags : ["react", ".net", "angular", "python"]).map((t) => {
-                const active = selectedTags.includes(t);
-                return (
-                  <button
-                    key={t}
-                    onClick={() => toggleTag(t)}
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      border: "1px solid #ddd",
-                      cursor: "pointer",
-                      background: active ? "#f3f3f3" : "white",
-                    }}
-                  >
-                    {active ? "✓ " : ""}{t}
-                  </button>
-                );
-              })}
-              {selectedTags.length > 0 && (
+        <div>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Filter by tags (AND)</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {(allTags.length ? allTags : ["react", ".net", "angular", "python"]).map((t) => {
+              const active = selectedTags.includes(t);
+              return (
                 <button
-                  onClick={() => setSelectedTags([])}
+                  key={t}
+                  onClick={() => toggleTag(t)}
                   style={{
                     padding: "6px 10px",
                     borderRadius: 999,
                     border: "1px solid #ddd",
                     cursor: "pointer",
-                    background: "white",
+                    background: active ? "#f3f3f3" : "white",
                   }}
                 >
-                  Clear tags
+                  {active ? "✓ " : ""}{t}
                 </button>
-              )}
-            </div>
+              );
+            })}
+            {selectedTags.length > 0 && (
+              <button
+                onClick={() => setQuery({ tag: [], page: "1" })}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  border: "1px solid #ddd",
+                  cursor: "pointer",
+                  background: "white",
+                }}
+              >
+                Clear tags
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Pagination controls */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+          <div style={{ fontSize: 13, color: "#666" }}>
+            Page size:
+            <select
+              value={pageSize}
+              onChange={(e) => setQuery({ pageSize: e.target.value, page: "1" })}
+              style={{ marginLeft: 8, padding: 6, borderRadius: 8, border: "1px solid #ddd" }}
+            >
+              {[10, 25, 50, 100].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => goToPage(1)} disabled={!canPrev} style={btnStyle}>
+              « First
+            </button>
+            <button onClick={() => goToPage(page - 1)} disabled={!canPrev} style={btnStyle}>
+              ‹ Prev
+            </button>
+            <button onClick={() => goToPage(page + 1)} disabled={!canNext} style={btnStyle}>
+              Next ›
+            </button>
+            <button onClick={() => goToPage(totalPages)} disabled={!canNext} style={btnStyle}>
+              Last »
+            </button>
           </div>
         </div>
       </div>
@@ -344,13 +384,13 @@ export default function JobsPage() {
                       </td>
 
                       <td style={tdStyle}>
-                        <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                           <a
                             href={j.url}
                             target="_blank"
                             rel="noreferrer"
                             style={{
-                              maxWidth: 800,
+                              maxWidth: 520,
                               display: "inline-block",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
@@ -360,18 +400,7 @@ export default function JobsPage() {
                           >
                             {j.url}
                           </a>
-                          <button
-                            onClick={() => copyUrl(j.url)}
-                            style={{
-                              border: "1px solid #ddd",
-                              background: "white",
-                              borderRadius: 8,
-                              padding: "6px 8px",
-                              cursor: "pointer",
-                              fontSize: 12,
-                            }}
-                            title="Copy URL"
-                          >
+                          <button onClick={() => copyUrl(j.url)} style={copyBtnStyle} title="Copy URL">
                             Copy
                           </button>
                         </div>
@@ -380,17 +409,7 @@ export default function JobsPage() {
                       <td style={tdStyle}>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {j.tags.map((t) => (
-                            <span
-                              key={t}
-                              style={{
-                                border: "1px solid #ddd",
-                                padding: "2px 8px",
-                                borderRadius: 999,
-                                fontSize: 12,
-                                color: "#444",
-                                background: "white",
-                              }}
-                            >
+                            <span key={t} style={tagPillStyle}>
                               {t}
                             </span>
                           ))}
@@ -444,31 +463,18 @@ export default function JobsPage() {
           <div style={{ fontSize: 13, color: "#444" }}>
             Selected: <b>{selectedJobs.length}</b>
             {selectedJobs.length > MAX_OPEN_TABS_SAFELY ? (
-              <span style={{ color: "#666" }}>
-                {" "}
-                (opening will be capped to {MAX_OPEN_TABS_SAFELY})
-              </span>
+              <span style={{ color: "#666" }}> (opening capped to {MAX_OPEN_TABS_SAFELY})</span>
             ) : null}
           </div>
 
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <button
-              onClick={copySelectedUrls}
-              disabled={selectedJobs.length === 0}
-              style={btnStyle}
-              title="Copy selected URLs (newline separated)"
-            >
+            <button onClick={copySelectedUrls} disabled={selectedJobs.length === 0} style={btnStyle}>
               Copy URLs
             </button>
-
             <button
               onClick={openSelected}
               disabled={selectedJobs.length === 0}
-              style={{
-                ...btnStyle,
-                borderColor: "#bbb",
-                fontWeight: 700,
-              }}
+              style={{ ...btnStyle, borderColor: "#bbb", fontWeight: 700 }}
             >
               Open selected
             </button>
@@ -498,6 +504,24 @@ const btnStyle: React.CSSProperties = {
   border: "1px solid #ddd",
   background: "white",
   cursor: "pointer",
+};
+
+const copyBtnStyle: React.CSSProperties = {
+  border: "1px solid #ddd",
+  background: "white",
+  borderRadius: 8,
+  padding: "6px 8px",
+  cursor: "pointer",
+  fontSize: 12,
+};
+
+const tagPillStyle: React.CSSProperties = {
+  border: "1px solid #ddd",
+  padding: "2px 8px",
+  borderRadius: 999,
+  fontSize: 12,
+  color: "#444",
+  background: "white",
 };
 
 function SkeletonRows() {

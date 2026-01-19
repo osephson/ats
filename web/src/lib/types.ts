@@ -16,6 +16,17 @@ export type Job = {
   lastOpenedAt: string | null; // in our MVP this will be filled via /opens/last
 };
 
+export type JobsListResponse = {
+  items: Job[];
+  meta: {
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
+    tags: string[];
+  };
+};
+
 export type Tag = { id: string; name: string };
 
 export type LastOpened = { jobUrlId: string; lastOpenedAt: string | null };

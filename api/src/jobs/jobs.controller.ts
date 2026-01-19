@@ -14,12 +14,22 @@ export class JobsController {
     return this.jobs.bulkUpload(req.user.userId, body);
   }
 
-  // Browse is public; if viewer has token, you can optionally pass it and get lastOpenedAt
-  // MVP: keep it public; if you want viewer context, front-end can call with Authorization header,
-  // and you add @UseGuards(OptionalAuthGuard) later. For now, keep it simple:
+  // Public browse with pagination + tag filtering
   @Get()
-  browse(@Query('tag') tag?: string | string[]) {
+  browse(
+    @Query('tag') tag?: string | string[],
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
     const tagNames = Array.isArray(tag) ? tag : tag ? [tag] : [];
-    return this.jobs.browse({ tagNames });
+
+    const pageNum = Math.max(1, parseInt(page || '1', 10) || 1);
+    const pageSizeNum = Math.min(100, Math.max(1, parseInt(pageSize || '25', 10) || 25));
+
+    return this.jobs.browse({
+      tagNames,
+      page: pageNum,
+      pageSize: pageSizeNum,
+    });
   }
 }
