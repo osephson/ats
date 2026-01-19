@@ -233,11 +233,11 @@ export default function JobsPage() {
   const canNext = page < totalPages;
 
   return (
-    <div style={{ display: "grid", gap: 14, paddingBottom: 84 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "grid", gap: 6 }}>
-          <h1 style={{ margin: 0 }}>Browse jobs</h1>
-          <div style={{ fontSize: 13, color: "#666" }}>
+    <div style={{ display: "grid", gap: 10, paddingBottom: 64 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "grid", gap: 4 }}>
+          <h1 style={{ margin: 0, fontSize: 18, lineHeight: 1.2 }}>Browse jobs</h1>
+          <div style={{ fontSize: 12, color: "#666" }}>
             {loading
               ? "Loading..."
               : `Page ${page} / ${totalPages} · Showing ${jobs.length} of ${meta?.totalCount ?? 0}`}
@@ -252,8 +252,8 @@ export default function JobsPage() {
       {err && <div style={{ color: "crimson", whiteSpace: "pre-wrap" }}>{err}</div>}
 
       {/* Controls */}
-      <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12, display: "grid", gap: 10 }}>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+      <div style={{ border: "1px solid #eee", borderRadius: 10, padding: 10, display: "grid", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -261,9 +261,10 @@ export default function JobsPage() {
             style={{
               flex: 1,
               minWidth: 220,
-              padding: 10,
+              padding: 8,
               border: "1px solid #ddd",
-              borderRadius: 10,
+              borderRadius: 8,
+              fontSize: 13,
             }}
           />
           <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13, color: "#444" }}>
@@ -283,8 +284,8 @@ export default function JobsPage() {
         </div>
 
         <div>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Filter by tags (AND)</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12 }}>Filter by tags (AND)</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {(allTags.length ? allTags : ["react", ".net", "angular", "python"]).map((t) => {
               const active = selectedTags.includes(t);
               return (
@@ -292,12 +293,13 @@ export default function JobsPage() {
                   key={t}
                   onClick={() => toggleTag(t)}
                   style={{
-                    padding: "6px 10px",
+                    padding: "4px 9px",
                     borderRadius: 999,
                     border: active ? "1px solid #1d4ed8" : "1px solid #ddd",
                     cursor: "pointer",
                     background: active ? "#2563eb" : "white",
                     color: active ? "white" : "#111",
+                    fontSize: 12,
                   }}
                 >
                   {active ? "✓ " : ""}
@@ -309,11 +311,12 @@ export default function JobsPage() {
               <button
                 onClick={() => setQuery({ tag: [], page: "1" })}
                 style={{
-                  padding: "6px 10px",
+                  padding: "4px 9px",
                   borderRadius: 999,
                   border: "1px solid #ddd",
                   cursor: "pointer",
                   background: "white",
+                  fontSize: 12,
                 }}
               >
                 Clear tags
@@ -323,8 +326,8 @@ export default function JobsPage() {
         </div>
 
         {/* Pagination controls */}
-        <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
-          <div style={{ fontSize: 13, color: "#666" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+          <div style={{ fontSize: 12, color: "#666" }}>
             Page size:
             <select
               value={pageSize}
@@ -357,9 +360,9 @@ export default function JobsPage() {
       </div>
 
       {/* Table */}
-      <div style={{ border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ border: "1px solid #eee", borderRadius: 10, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
               <tr style={{ background: "#fafafa" }}>
                 <th style={thStyle}>
@@ -375,7 +378,6 @@ export default function JobsPage() {
                 <th style={thStyle}>Tags</th>
                 <th style={thStyle}>Uploaded by</th>
                 <th style={thStyle}>Created</th>
-                <th style={thStyle}>Last opened (you)</th>
               </tr>
             </thead>
             <tbody>
@@ -390,6 +392,9 @@ export default function JobsPage() {
               ) : (
                 filteredJobs.map((j) => {
                   const checked = selectedIds.has(j.id);
+                  const openedTitle = j.lastOpenedAt
+                    ? `Opened: ${new Date(j.lastOpenedAt).toLocaleString()}`
+                    : null;
                   return (
                     <tr key={j.id} style={{ borderTop: "1px solid #eee" }}>
                       <td style={tdStyle}>
@@ -397,13 +402,13 @@ export default function JobsPage() {
                       </td>
 
                       <td style={tdStyle}>
-                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                           <a
                             href={j.url}
                             target="_blank"
                             rel="noreferrer"
                             style={{
-                              maxWidth: 520,
+                              maxWidth: "100%",
                               display: "inline-block",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
@@ -413,9 +418,22 @@ export default function JobsPage() {
                           >
                             {j.url}
                           </a>
-                          <button onClick={() => copyUrl(j.url)} style={copyBtnStyle} title="Copy URL">
-                            Copy
-                          </button>
+                          {j.lastOpenedAt ? (
+                            <span
+                              title={openedTitle || undefined}
+                              style={{
+                                border: "1px solid #93c5fd",
+                                background: "#e0f2fe",
+                                color: "#0f172a",
+                                borderRadius: 999,
+                                padding: "2px 8px",
+                                fontSize: 11,
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              Opened
+                            </span>
+                          ) : null}
                         </div>
                       </td>
 
@@ -440,12 +458,6 @@ export default function JobsPage() {
                           {new Date(j.createdAt).toLocaleString()}
                         </span>
                       </td>
-
-                      <td style={tdStyle}>
-                        <span style={{ fontSize: 12, color: "#444" }}>
-                          {j.lastOpenedAt ? new Date(j.lastOpenedAt).toLocaleString() : "—"}
-                        </span>
-                      </td>
                     </tr>
                   );
                 })
@@ -462,32 +474,48 @@ export default function JobsPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          borderTop: "1px solid #eee",
-          background: "rgba(255,255,255,0.96)",
-          backdropFilter: "blur(6px)",
+          borderTop: "1px solid #e5e7eb",
+          background: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(10px)",
+          boxShadow: "0 -6px 16px rgba(0,0,0,0.05)",
         }}
       >
         <div
           style={{
-            maxWidth: 900,
+            maxWidth: 1100,
             margin: "0 auto",
-            padding: 12,
+            padding: "6px 10px",
             display: "flex",
-            gap: 10,
+            gap: 12,
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: "flex-end",
             flexWrap: "wrap",
           }}
         >
-          <div style={{ fontSize: 13, color: "#444" }}>
-            Selected: <b>{selectedJobs.length}</b>
-            {selectedJobs.length > MAX_OPEN_TABS_SAFELY ? (
-              <span style={{ color: "#666" }}> (opening capped to {MAX_OPEN_TABS_SAFELY})</span>
-            ) : null}
-          </div>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              border: "1px solid #e5e7eb",
+              background: "white",
+              borderRadius: 14,
+              padding: 8,
+            }}
+          >
+            <span style={{ fontSize: 12, color: "#444", minWidth: 80, textAlign: "right" }}>
+              Selected: <b>{selectedJobs.length}</b>
+            </span>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <button onClick={copySelectedUrls} disabled={selectedJobs.length === 0} style={btnStyle}>
+            <button
+              onClick={copySelectedUrls}
+              disabled={selectedJobs.length === 0}
+              style={
+                selectedJobs.length === 0
+                  ? { ...btnStyle, borderColor: "#e5e7eb", color: "#999", cursor: "not-allowed" }
+                  : { ...btnStyle }
+              }
+            >
               Copy URLs
             </button>
             <button
@@ -505,7 +533,7 @@ export default function JobsPage() {
                     }
               }
             >
-              Open selected
+              {`Open selected (${selectedJobs.length})`}
             </button>
           </div>
         </div>
@@ -516,32 +544,27 @@ export default function JobsPage() {
 
 const thStyle: React.CSSProperties = {
   textAlign: "left",
-  padding: 10,
-  fontSize: 12,
+  padding: 6,
+  fontSize: 11,
   color: "#666",
   borderBottom: "1px solid #eee",
 };
 
 const tdStyle: React.CSSProperties = {
-  padding: 10,
+  padding: 6,
   verticalAlign: "top",
 };
 
 const btnStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 10,
-  border: "1px solid #ddd",
+  padding: "10px 14px",
+  borderRadius: 12,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#d1d5db",
   background: "white",
   cursor: "pointer",
-};
-
-const copyBtnStyle: React.CSSProperties = {
-  border: "1px solid #ddd",
-  background: "white",
-  borderRadius: 8,
-  padding: "6px 8px",
-  cursor: "pointer",
-  fontSize: 12,
+  fontSize: 14,
+  lineHeight: 1,
 };
 
 const tagPillStyle: React.CSSProperties = {
