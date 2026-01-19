@@ -361,6 +361,7 @@ export default function JobsPage() {
                 </th>
                 <th style={thStyle}>URL</th>
                 <th style={thStyle}>Tags</th>
+                <th style={thStyle}>Uploaded by</th>
                 <th style={thStyle}>Created</th>
                 <th style={thStyle}>Last opened (you)</th>
               </tr>
@@ -414,6 +415,12 @@ export default function JobsPage() {
                             </span>
                           ))}
                         </div>
+                      </td>
+
+                      <td style={tdStyle}>
+                        <span style={{ fontSize: 12, color: "#444" }}>
+                          {j.createdByUserEmail ?? "—"}
+                        </span>
                       </td>
 
                       <td style={tdStyle}>

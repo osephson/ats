@@ -12,6 +12,7 @@ export type Job = {
   url: string;
   createdAt: string;
   createdByUserId: string | null;
+  createdByUserEmail: string | null;
   tags: string[];
   lastOpenedAt: string | null; // in our MVP this will be filled via /opens/last
 };

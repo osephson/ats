@@ -125,6 +125,9 @@ export class JobsService {
           url: true,
           createdAt: true,
           createdByUserId: true,
+          createdByUser: {
+            select: { email: true },
+          },
           tags: { select: { tag: { select: { name: true } } } },
         },
       }),
@@ -138,6 +141,7 @@ export class JobsService {
         url: j.url,
         createdAt: j.createdAt,
         createdByUserId: j.createdByUserId,
+        createdByUserEmail: j.createdByUser?.email ?? null,
         tags: j.tags.map((x) => x.tag.name),
         lastOpenedAt: null, // still fetched via /opens/last in web
       })),
