@@ -400,6 +400,7 @@ export type OpenCreateOrConnectWithoutUserInput = {
 
 export type OpenCreateManyUserInputEnvelope = {
   data: Prisma.OpenCreateManyUserInput | Prisma.OpenCreateManyUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type OpenUpsertWithWhereUniqueWithoutUserInput = {
@@ -447,6 +448,7 @@ export type OpenCreateOrConnectWithoutJobUrlInput = {
 
 export type OpenCreateManyJobUrlInputEnvelope = {
   data: Prisma.OpenCreateManyJobUrlInput | Prisma.OpenCreateManyJobUrlInput[]
+  skipDuplicates?: boolean
 }
 
 export type OpenUpsertWithWhereUniqueWithoutJobUrlInput = {
@@ -1232,6 +1234,7 @@ export type OpenCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * The data used to create many Opens.
    */
   data: Prisma.OpenCreateManyInput | Prisma.OpenCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1250,6 +1253,7 @@ export type OpenCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions
    * The data used to create many Opens.
    */
   data: Prisma.OpenCreateManyInput | Prisma.OpenCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */

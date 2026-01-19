@@ -359,6 +359,7 @@ export type JobUrlTagCreateOrConnectWithoutJobUrlInput = {
 
 export type JobUrlTagCreateManyJobUrlInputEnvelope = {
   data: Prisma.JobUrlTagCreateManyJobUrlInput | Prisma.JobUrlTagCreateManyJobUrlInput[]
+  skipDuplicates?: boolean
 }
 
 export type JobUrlTagUpsertWithWhereUniqueWithoutJobUrlInput = {
@@ -400,6 +401,7 @@ export type JobUrlTagCreateOrConnectWithoutTagInput = {
 
 export type JobUrlTagCreateManyTagInputEnvelope = {
   data: Prisma.JobUrlTagCreateManyTagInput | Prisma.JobUrlTagCreateManyTagInput[]
+  skipDuplicates?: boolean
 }
 
 export type JobUrlTagUpsertWithWhereUniqueWithoutTagInput = {
@@ -1157,6 +1159,7 @@ export type JobUrlTagCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Int
    * The data used to create many JobUrlTags.
    */
   data: Prisma.JobUrlTagCreateManyInput | Prisma.JobUrlTagCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1175,6 +1178,7 @@ export type JobUrlTagCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Exten
    * The data used to create many JobUrlTags.
    */
   data: Prisma.JobUrlTagCreateManyInput | Prisma.JobUrlTagCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */
