@@ -9,6 +9,19 @@ export function setToken(token: string) {
   localStorage.setItem("token", token);
 }
 
+export function getUser() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("email");
+}
+
+export function setUser(email: string) {
+  localStorage.setItem("email", email);
+}
+
+export function clearUser() {
+  localStorage.removeItem("email");
+}
+
 export function clearToken() {
   localStorage.removeItem("token");
 }

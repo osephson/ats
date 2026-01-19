@@ -1,6 +1,6 @@
 "use client";
 
-import { apiFetch, setToken } from "@/lib/api";
+import { apiFetch, setToken, setUser } from "@/lib/api";
 import type { AuthResponse } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -51,6 +51,7 @@ export default function SignupPage() {
         body: JSON.stringify({ email: emailTrim, password: passwordTrim }),
       });
       setToken(res.token);
+      setUser(emailTrim);
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next") || "/jobs";
       router.push(next);

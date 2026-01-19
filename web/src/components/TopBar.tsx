@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { clearToken, getToken } from "@/lib/api";
+import { clearToken, clearUser, getToken, getUser, setUser } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 export default function TopBar() {
   const [hasToken, setHasToken] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     setHasToken(!!getToken());
+    setUserEmail(getUser());
   }, [pathname]);
 
   return (
@@ -31,11 +33,13 @@ export default function TopBar() {
         <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
           {hasToken ? (
             <>
-              <span style={{ fontSize: 13, color: "#666" }}>Signed in</span>
+              <span style={{ fontSize: 13, color: "#666" }}>Signed in <b>{userEmail}</b></span>
               <button
                 onClick={() => {
                   clearToken();
                   setHasToken(false);
+                  setUserEmail(null);
+                  clearUser();
                   router.push("/");
                 }}
                 style={{

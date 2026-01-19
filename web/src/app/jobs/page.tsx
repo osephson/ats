@@ -1,6 +1,6 @@
 "use client";
 
-import { apiFetch, getToken } from "@/lib/api";
+import { apiFetch, getToken, getUser } from "@/lib/api";
 import type { Job, JobsListResponse, LastOpened, Tag } from "@/lib/types";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -27,6 +27,11 @@ export default function JobsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [hideOpened, setHideOpened] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    setUserEmail(getUser());
+  }, []);
 
   // Read state from URL
   const selectedTags = useMemo(() => searchParams.getAll("tag"), [searchParams]);
@@ -235,12 +240,45 @@ export default function JobsPage() {
   return (
     <div style={{ display: "grid", gap: 10, paddingBottom: 64 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ display: "grid", gap: 4 }}>
+        <div style={{ display: "grid"}}>
           <h1 style={{ margin: 0, fontSize: 18, lineHeight: 1.2 }}>Browse jobs</h1>
           <div style={{ fontSize: 12, color: "#666" }}>
             {loading
               ? "Loading..."
               : `Page ${page} / ${totalPages} · Showing ${jobs.length} of ${meta?.totalCount ?? 0}`}
+          </div>
+        </div>
+
+        {/* Pagination controls */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+          <div style={{ fontSize: 12, color: "#666" }}>
+            Page size:
+            <select
+              value={pageSize}
+              onChange={(e) => setQuery({ pageSize: e.target.value, page: "1" })}
+              style={{ marginLeft: 8, padding: 6, borderRadius: 8, border: "1px solid #ddd" }}
+            >
+              {[10, 25, 50, 100].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => goToPage(1)} disabled={!canPrev} style={btnStyle}>
+              « First
+            </button>
+            <button onClick={() => goToPage(page - 1)} disabled={!canPrev} style={btnStyle}>
+              ‹ Prev
+            </button>
+            <button onClick={() => goToPage(page + 1)} disabled={!canNext} style={btnStyle}>
+              Next ›
+            </button>
+            <button onClick={() => goToPage(totalPages)} disabled={!canNext} style={btnStyle}>
+              Last »
+            </button>
           </div>
         </div>
 
@@ -322,39 +360,6 @@ export default function JobsPage() {
                 Clear tags
               </button>
             )}
-          </div>
-        </div>
-
-        {/* Pagination controls */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
-          <div style={{ fontSize: 12, color: "#666" }}>
-            Page size:
-            <select
-              value={pageSize}
-              onChange={(e) => setQuery({ pageSize: e.target.value, page: "1" })}
-              style={{ marginLeft: 8, padding: 6, borderRadius: 8, border: "1px solid #ddd" }}
-            >
-              {[10, 25, 50, 100].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => goToPage(1)} disabled={!canPrev} style={btnStyle}>
-              « First
-            </button>
-            <button onClick={() => goToPage(page - 1)} disabled={!canPrev} style={btnStyle}>
-              ‹ Prev
-            </button>
-            <button onClick={() => goToPage(page + 1)} disabled={!canNext} style={btnStyle}>
-              Next ›
-            </button>
-            <button onClick={() => goToPage(totalPages)} disabled={!canNext} style={btnStyle}>
-              Last »
-            </button>
           </div>
         </div>
       </div>
@@ -449,7 +454,7 @@ export default function JobsPage() {
 
                       <td style={tdStyle}>
                         <span style={{ fontSize: 12, color: "#444" }}>
-                          {j.createdByUserEmail ?? "—"}
+                          {j.createdByUserEmail === userEmail ? "You" : j.createdByUserEmail  ?? "—"}
                         </span>
                       </td>
 
