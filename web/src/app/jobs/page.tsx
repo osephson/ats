@@ -408,7 +408,7 @@ export default function JobsPage() {
                             target="_blank"
                             rel="noreferrer"
                             style={{
-                              maxWidth: "100%",
+                              maxWidth: "520px",
                               display: "inline-block",
                               whiteSpace: "nowrap",
                               overflow: "hidden",
