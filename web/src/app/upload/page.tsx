@@ -5,6 +5,7 @@ import type { BulkUploadResponse } from "@/lib/types";
 import { TagChips } from "@/components/TagChips";
 import { TagPicker } from "@/components/TagPicker";
 import { useMemo, useState } from "react";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 
 export default function UploadPage() {
   const [urlsText, setUrlsText] = useState("");
@@ -46,6 +47,9 @@ export default function UploadPage() {
   function removeTag(t: string) {
     setTags(tags.filter((x) => x !== t));
   }
+
+  const { ready } = useRequireAuth();
+  if (!ready) return null;
 
   return (
     <div style={{ display: "grid", gap: 14 }}>

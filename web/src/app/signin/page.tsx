@@ -48,7 +48,10 @@ export default function SigninPage() {
         body: JSON.stringify({ email: emailTrim, password: passwordTrim }),
       });
       setToken(res.token);
-      router.push("/jobs");
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next") || "/jobs";
+      router.push(next);
+
     } catch (ex: any) {
       setErr(ex?.message || "Failed");
     } finally {

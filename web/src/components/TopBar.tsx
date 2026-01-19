@@ -20,8 +20,13 @@ export default function TopBar() {
         <Link href="/jobs" style={{ fontWeight: 700 }}>
           ATS Jobs
         </Link>
-        <Link href="/jobs">Jobs</Link>
-        <Link href="/upload">Upload</Link>
+        {hasToken && (
+          <>
+            <Link href="/jobs">Jobs</Link>
+            <Link href="/upload">Upload</Link>
+          </>
+        )}
+
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
           {hasToken ? (
@@ -31,7 +36,7 @@ export default function TopBar() {
                 onClick={() => {
                   clearToken();
                   setHasToken(false);
-                  router.push("/jobs");
+                  router.push("/");
                 }}
                 style={{
                   padding: "8px 12px",

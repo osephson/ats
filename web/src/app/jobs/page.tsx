@@ -2,6 +2,7 @@
 
 import { apiFetch, getToken } from "@/lib/api";
 import type { Job, LastOpened, Tag } from "@/lib/types";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 import { useEffect, useMemo, useState } from "react";
 
 const MAX_OPEN_TABS_SAFELY = 15;
@@ -195,6 +196,9 @@ export default function JobsPage() {
       setErr("Failed to copy URL.");
     }
   }
+
+  const { ready } = useRequireAuth();
+  if (!ready) return null;
 
   return (
     <div style={{ display: "grid", gap: 14, paddingBottom: 84 }}>
