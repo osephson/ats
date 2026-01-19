@@ -411,6 +411,7 @@ export type JobUrlCreateOrConnectWithoutCreatedByUserInput = {
 
 export type JobUrlCreateManyCreatedByUserInputEnvelope = {
   data: Prisma.JobUrlCreateManyCreatedByUserInput | Prisma.JobUrlCreateManyCreatedByUserInput[]
+  skipDuplicates?: boolean
 }
 
 export type JobUrlUpsertWithWhereUniqueWithoutCreatedByUserInput = {
@@ -1322,6 +1323,7 @@ export type JobUrlCreateManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * The data used to create many JobUrls.
    */
   data: Prisma.JobUrlCreateManyInput | Prisma.JobUrlCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1340,6 +1342,7 @@ export type JobUrlCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensio
    * The data used to create many JobUrls.
    */
   data: Prisma.JobUrlCreateManyInput | Prisma.JobUrlCreateManyInput[]
+  skipDuplicates?: boolean
   /**
    * Choose, which related nodes to fetch as well
    */
