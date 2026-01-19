@@ -1,9 +1,14 @@
 "use client";
 
-import { apiFetch, setToken } from "@/lib/api";
+import { apiFetch, setToken, setUser } from "@/lib/api";
 import type { AuthResponse } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+
+function isEmailLike(s: string) {
+  // simple MVP check
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -12,17 +17,44 @@ export default function SignupPage() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const emailTrim = email.trim();
+  const passwordTrim = password;
+
+  const emailError = useMemo(() => {
+    if (!emailTrim) return "Email is required";
+    if (!isEmailLike(emailTrim)) return "Please enter a valid email";
+    return null;
+  }, [emailTrim]);
+
+  const passwordError = useMemo(() => {
+    if (!passwordTrim) return "Password is required";
+    if (passwordTrim.length < 6) return "Password must be at least 6 characters";
+    return null;
+  }, [passwordTrim]);
+
+  const canSubmit = !loading && !emailError && !passwordError;
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+
+    // guard (in case user bypasses disabled button)
+    if (emailError || passwordError) {
+      setErr([emailError, passwordError].filter(Boolean).join("\n"));
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await apiFetch<AuthResponse>("/auth/signup", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: emailTrim, password: passwordTrim }),
       });
       setToken(res.token);
-      router.push("/jobs");
+      setUser(emailTrim);
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next") || "/jobs";
+      router.push(next);
     } catch (ex: any) {
       setErr(ex?.message || "Failed");
     } finally {
@@ -35,39 +67,52 @@ export default function SignupPage() {
       <h1 style={{ margin: 0 }}>Sign up</h1>
 
       <form onSubmit={onSubmit} style={{ display: "grid", gap: 10 }}>
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          style={{ padding: 10, border: "1px solid #ddd", borderRadius: 8 }}
-        />
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          type="password"
-          style={{ padding: 10, border: "1px solid #ddd", borderRadius: 8 }}
-        />
+        <div style={{ display: "grid", gap: 6 }}>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            style={{
+              padding: 10,
+              border: "1px solid #ddd",
+              borderRadius: 8,
+              outline: "none",
+            }}
+          />
+          {emailError && <div style={{ color: "crimson", fontSize: 12 }}>{emailError}</div>}
+        </div>
+
+        <div style={{ display: "grid", gap: 6 }}>
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            type="password"
+            style={{
+              padding: 10,
+              border: "1px solid #ddd",
+              borderRadius: 8,
+              outline: "none",
+            }}
+          />
+          {passwordError && <div style={{ color: "crimson", fontSize: 12 }}>{passwordError}</div>}
+        </div>
 
         <button
-          disabled={loading}
+          disabled={!canSubmit}
           style={{
             padding: 10,
             borderRadius: 8,
             border: "1px solid #ddd",
-            cursor: "pointer",
+            cursor: canSubmit ? "pointer" : "not-allowed",
+            opacity: canSubmit ? 1 : 0.6,
           }}
         >
           {loading ? "Creating..." : "Create account"}
         </button>
       </form>
 
-      {err && (
-        <div style={{ color: "crimson", whiteSpace: "pre-wrap" }}>{err}</div>
-      )}
-      <div style={{ fontSize: 13, color: "#666" }}>
-        MVP note: password rules and validation are intentionally light.
-      </div>
+      {err && <div style={{ color: "crimson", whiteSpace: "pre-wrap" }}>{err}</div>}
     </div>
   );
 }

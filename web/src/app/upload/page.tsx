@@ -5,10 +5,11 @@ import type { BulkUploadResponse } from "@/lib/types";
 import { TagChips } from "@/components/TagChips";
 import { TagPicker } from "@/components/TagPicker";
 import { useMemo, useState } from "react";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 
 export default function UploadPage() {
   const [urlsText, setUrlsText] = useState("");
-  const [tags, setTags] = useState<string[]>(["react", ".net"]);
+  const [tags, setTags] = useState<string[]>([]);
   const [result, setResult] = useState<BulkUploadResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,6 +48,9 @@ export default function UploadPage() {
     setTags(tags.filter((x) => x !== t));
   }
 
+  const { ready } = useRequireAuth();
+  if (!ready) return null;
+
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <h1 style={{ margin: 0 }}>Upload jobs (bulk URLs)</h1>
@@ -81,13 +85,15 @@ export default function UploadPage() {
 
       <button
         onClick={onUpload}
-        disabled={loading}
+        disabled={loading || !tags.length}
         style={{
           padding: 12,
           borderRadius: 10,
           border: "1px solid #ddd",
-          cursor: "pointer",
+          cursor: tags.length ? "pointer" : "not-allowed",
           width: "fit-content",
+          backgroundColor: !tags.length ? "white" : "rgb(37, 99, 235)",
+          color: !tags.length ? "#999" : "white",
         }}
       >
         {loading ? "Uploading..." : "Upload"}

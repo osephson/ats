@@ -1,9 +1,13 @@
 "use client";
 
-import { apiFetch, clearToken, setToken, getToken } from "@/lib/api";
+import { apiFetch, setToken, setUser } from "@/lib/api";
 import type { AuthResponse } from "@/lib/types";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+
+function isEmailLike(s: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+}
 
 export default function SigninPage() {
   const router = useRouter();
@@ -11,23 +15,44 @@ export default function SigninPage() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [hasToken, setHasToken] = useState(false);
 
-  useEffect(() => {
-    setHasToken(!!getToken());
-  }, []);
+  const emailTrim = email.trim();
+  const passwordTrim = password;
+
+  const emailError = useMemo(() => {
+    if (!emailTrim) return "Email is required";
+    if (!isEmailLike(emailTrim)) return "Please enter a valid email";
+    return null;
+  }, [emailTrim]);
+
+  const passwordError = useMemo(() => {
+    if (!passwordTrim) return "Password is required";
+    return null;
+  }, [passwordTrim]);
+
+  const canSubmit = !loading && !emailError && !passwordError;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+
+    if (emailError || passwordError) {
+      setErr([emailError, passwordError].filter(Boolean).join("\n"));
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await apiFetch<AuthResponse>("/auth/signin", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: emailTrim, password: passwordTrim }),
       });
       setToken(res.token);
-      router.push("/jobs");
+      setUser(emailTrim);
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next") || "/jobs";
+      router.push(next);
+
     } catch (ex: any) {
       setErr(ex?.message || "Failed");
     } finally {
@@ -39,56 +64,43 @@ export default function SigninPage() {
     <div style={{ display: "grid", gap: 12, maxWidth: 420 }}>
       <h1 style={{ margin: 0 }}>Sign in</h1>
 
-      {hasToken && (
-        <button
-          onClick={() => {
-            clearToken();
-            setHasToken(false);
-            router.refresh();
-          }}
-          style={{
-            width: "fit-content",
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid #ddd",
-            cursor: "pointer",
-          }}
-        >
-          Sign out (clear token)
-        </button>
-      )}
-
       <form onSubmit={onSubmit} style={{ display: "grid", gap: 10 }}>
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          style={{ padding: 10, border: "1px solid #ddd", borderRadius: 8 }}
-        />
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          type="password"
-          style={{ padding: 10, border: "1px solid #ddd", borderRadius: 8 }}
-        />
+        <div style={{ display: "grid", gap: 6 }}>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            style={{ padding: 10, border: "1px solid #ddd", borderRadius: 8, outline: "none" }}
+          />
+          {emailError && <div style={{ color: "crimson", fontSize: 12 }}>{emailError}</div>}
+        </div>
+
+        <div style={{ display: "grid", gap: 6 }}>
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            type="password"
+            style={{ padding: 10, border: "1px solid #ddd", borderRadius: 8, outline: "none" }}
+          />
+          {passwordError && <div style={{ color: "crimson", fontSize: 12 }}>{passwordError}</div>}
+        </div>
 
         <button
-          disabled={loading}
+          disabled={!canSubmit}
           style={{
             padding: 10,
             borderRadius: 8,
             border: "1px solid #ddd",
-            cursor: "pointer",
+            cursor: canSubmit ? "pointer" : "not-allowed",
+            opacity: canSubmit ? 1 : 0.6,
           }}
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
       </form>
 
-      {err && (
-        <div style={{ color: "crimson", whiteSpace: "pre-wrap" }}>{err}</div>
-      )}
+      {err && <div style={{ color: "crimson", whiteSpace: "pre-wrap" }}>{err}</div>}
     </div>
   );
 }

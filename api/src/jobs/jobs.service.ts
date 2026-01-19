@@ -96,12 +96,15 @@ export class JobsService {
     };
   }
 
-  async browse(params: { tagNames?: string[]; viewerUserId?: string }) {
+  async browse(params: { tagNames?: string[]; page: number; pageSize: number }) {
     const tagNames = (params.tagNames || []).filter(Boolean);
+    const page = Math.max(1, params.page || 1);
+    const pageSize = Math.min(100, Math.max(1, params.pageSize || 25));
+    const skip = (page - 1) * pageSize;
+    const take = pageSize;
 
-    // If tags provided: job must have ALL of them
-    // Prisma pattern: AND of "some tag with name=...".
-    const tagFilters =
+    // AND semantics: job must have ALL tags
+    const where =
       tagNames.length === 0
         ? {}
         : {
@@ -110,40 +113,46 @@ export class JobsService {
             })),
           };
 
-    const jobs = await this.prisma.jobUrl.findMany({
-      where: { ...tagFilters },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        url: true,
-        createdAt: true,
-        createdByUserId: true,
-        tags: { select: { tag: { select: { name: true } } } },
+    const [totalCount, jobs] = await this.prisma.$transaction([
+      this.prisma.jobUrl.count({ where }),
+      this.prisma.jobUrl.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        select: {
+          id: true,
+          url: true,
+          createdAt: true,
+          createdByUserId: true,
+          createdByUser: {
+            select: { email: true },
+          },
+          tags: { select: { tag: { select: { name: true } } } },
+        },
+      }),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+    return {
+      items: jobs.map((j) => ({
+        id: j.id,
+        url: j.url,
+        createdAt: j.createdAt,
+        createdByUserId: j.createdByUserId,
+        createdByUserEmail: j.createdByUser?.email ?? null,
+        tags: j.tags.map((x) => x.tag.name),
+        lastOpenedAt: null, // still fetched via /opens/last in web
+      })),
+      meta: {
+        page,
+        pageSize,
+        totalCount,
+        totalPages,
+        tags: tagNames,
       },
-      take: 500, // MVP safety
-    });
-
-    // viewer last opened
-    let lastOpenedMap = new Map<string, string>();
-    if (params.viewerUserId) {
-      const opens = await this.prisma.open.groupBy({
-        by: ['jobUrlId'],
-        where: { userId: params.viewerUserId, jobUrlId: { in: jobs.map((j) => j.id) } },
-        _max: { openedAt: true },
-      });
-
-      for (const o of opens) {
-        if (o._max.openedAt) lastOpenedMap.set(o.jobUrlId, o._max.openedAt.toISOString());
-      }
-    }
-
-    return jobs.map((j) => ({
-      id: j.id,
-      url: j.url,
-      createdAt: j.createdAt,
-      createdByUserId: j.createdByUserId,
-      tags: j.tags.map((x) => x.tag.name),
-      lastOpenedAt: lastOpenedMap.get(j.id) ?? null,
-    }));
+    };
   }
+
 }

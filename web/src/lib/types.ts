@@ -12,8 +12,20 @@ export type Job = {
   url: string;
   createdAt: string;
   createdByUserId: string | null;
+  createdByUserEmail: string | null;
   tags: string[];
   lastOpenedAt: string | null; // in our MVP this will be filled via /opens/last
+};
+
+export type JobsListResponse = {
+  items: Job[];
+  meta: {
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
+    tags: string[];
+  };
 };
 
 export type Tag = { id: string; name: string };
