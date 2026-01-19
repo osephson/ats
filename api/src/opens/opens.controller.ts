@@ -1,7 +1,7 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { OpensService } from './opens.service';
-import { RecordOpensDto } from './dto';
+import type { RecordOpensDto } from './dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('opens')
