@@ -26,6 +26,7 @@ export default function JobsPage() {
   const [search, setSearch] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hideOpened, setHideOpened] = useState(false);
 
   // Read state from URL
   const selectedTags = useMemo(() => searchParams.getAll("tag"), [searchParams]);
@@ -54,9 +55,10 @@ export default function JobsPage() {
   // client-side search only (doesn’t change server results)
   const filteredJobs = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return jobs;
-    return jobs.filter((j) => j.url.toLowerCase().includes(q));
-  }, [jobs, search]);
+    const base = hideOpened ? jobs.filter((j) => !j.lastOpenedAt) : jobs;
+    if (!q) return base;
+    return base.filter((j) => j.url.toLowerCase().includes(q));
+  }, [jobs, search, hideOpened]);
 
   const selectedJobs = useMemo(
     () => filteredJobs.filter((j) => selectedIds.has(j.id)),
@@ -264,6 +266,14 @@ export default function JobsPage() {
               borderRadius: 10,
             }}
           />
+          <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13, color: "#444" }}>
+            <input
+              type="checkbox"
+              checked={hideOpened}
+              onChange={(e) => setHideOpened(e.target.checked)}
+            />
+            Do not show I opened already
+          </label>
           <button onClick={toggleSelectAllVisible} disabled={filteredJobs.length === 0} style={btnStyle}>
             {allVisibleSelected ? "Unselect page" : "Select page"}
           </button>
