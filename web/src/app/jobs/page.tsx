@@ -294,12 +294,14 @@ export default function JobsPage() {
                   style={{
                     padding: "6px 10px",
                     borderRadius: 999,
-                    border: "1px solid #ddd",
+                    border: active ? "1px solid #1d4ed8" : "1px solid #ddd",
                     cursor: "pointer",
-                    background: active ? "#f3f3f3" : "white",
+                    background: active ? "#2563eb" : "white",
+                    color: active ? "white" : "#111",
                   }}
                 >
-                  {active ? "✓ " : ""}{t}
+                  {active ? "✓ " : ""}
+                  {t}
                 </button>
               );
             })}
@@ -491,7 +493,17 @@ export default function JobsPage() {
             <button
               onClick={openSelected}
               disabled={selectedJobs.length === 0}
-              style={{ ...btnStyle, borderColor: "#bbb", fontWeight: 700 }}
+              style={
+                selectedJobs.length === 0
+                  ? { ...btnStyle, borderColor: "#ddd", fontWeight: 700, color: "#999", cursor: "not-allowed" }
+                  : {
+                      ...btnStyle,
+                      borderColor: "#1d4ed8",
+                      background: "#2563eb",
+                      color: "white",
+                      fontWeight: 700,
+                    }
+              }
             >
               Open selected
             </button>

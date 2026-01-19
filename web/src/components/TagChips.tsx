@@ -15,12 +15,14 @@ export function TagChips({
         <span
           key={t}
           style={{
-            border: "1px solid #ddd",
+            border: "1px solid #1d4ed8",
             padding: "4px 8px",
             borderRadius: 999,
             display: "inline-flex",
             gap: 8,
             alignItems: "center",
+            background: "#2563eb",
+            color: "white",
           }}
         >
           <span>{t}</span>
@@ -31,6 +33,7 @@ export function TagChips({
               background: "transparent",
               cursor: "pointer",
               fontSize: 14,
+              color: "inherit",
             }}
             aria-label={`remove ${t}`}
             title="Remove"
