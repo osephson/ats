@@ -11,6 +11,7 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   });
 
-  await app.listen(8001);
+  const port = process.env.PORT ? Number(process.env.PORT) : 3001;
+  await app.listen(port);
 }
 bootstrap();
