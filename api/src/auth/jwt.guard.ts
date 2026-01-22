@@ -10,7 +10,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
-    if (request.url.includes('/jobs/bulk')) {
+    if (!request.url.includes('/auth')) {
       const token = request.headers.authorization?.split(' ')[1];
       if (token) {
         try {
