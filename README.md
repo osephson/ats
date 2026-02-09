@@ -1,3 +1,3 @@
 # Introduction
 
-This is a simple ATS platform.
+This is a simple ATS platform!
